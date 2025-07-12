@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonk Run - 3D Endless Runner Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Russo+One&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #181824; }
+    #score, #instructions, #gameover {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #FFA500;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      text-shadow: none;
+      z-index: 10;
+      user-select: none;
+      transition: opacity 0.6s;
+    }
+    #score.fade-out, #instructions.fade-out, #gameover.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #start-menu-overlay, #gameover-overlay {
+      opacity: 0;
+      transition: opacity 0.7s;
+      pointer-events: none;
+    }
+    #start-menu-overlay.visible, #gameover-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #score { top: 16px; font-size: 2em; color: #FFA500; }
+    #instructions { top: 60px; font-size: 1.2em; color: #FFD700; }
+    #gameover {
+      top: 40%;
+      font-size: 2.5em;
+      color: #FF6F00;
+      text-shadow: none;
+      display: none;
+    }
+    /* Loading/Start Animation Styles */
+    #loading-overlay {
+      transition: background 0.7s;
+    }
+    #loading-title {
+      transition: transform 0.7s cubic-bezier(.4,2,.6,1), opacity 0.5s;
+      will-change: transform, opacity;
+    }
+    #loading-title.animated-up {
+      transform: translateY(-120px);
+    }
+    #loading-bar-container {
+      transition: opacity 0.5s;
+    }
+    #loading-bar-container.faded-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #start-btn {
+      opacity: 0;
+      transition: opacity 0.7s;
+      pointer-events: none;
+    }
+    #start-btn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.8s forwards;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    @media (max-width: 600px) {
+      #score { font-size: 1.2em; }
+      #instructions { font-size: 1em; }
+      #gameover { font-size: 1.5em; }
+    }
+    #game-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 1.2em;
+      color: #FFD700;
+      background: #2a220a;
+      border-bottom: 2px solid #FFD700;
+      box-shadow: 0 2px 8px #0008;
+      height: 56px;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    .header-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+    }
+    #game-header.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #FFD700;
+      box-shadow: 0 0 8px #FFD70044;
+      object-fit: cover;
+      margin-right: 8px;
+    }
+    .header-title {
+      font-size: 1.25em;
+      font-weight: bold;
+      color: #FFD700;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 2px #000a;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    .header-icon-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: #181824;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px #0006;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1.5px solid #FFD70022;
+    }
+    .header-icon-link:hover {
+      background: #FFD700;
+      box-shadow: 0 2px 8px #FFD70044;
+    }
+    .header-icon-link svg {
+      width: 22px;
+      height: 22px;
+      fill: #fff;
+      transition: fill 0.2s;
+    }
+    .header-icon-link:hover svg {
+      fill: #2a220a;
+    }
+    @media (max-width: 700px) {
+      .header-container { max-width: 98vw; padding: 0 6px; }
+      .header-title { font-size: 1em; }
+      .header-logo { width: 30px; height: 30px; }
+      .header-icon-link { width: 30px; height: 30px; }
+      .header-right { gap: 12px; }
+    }
+    body, #game-header, #score, #instructions, #gameover, #start-title, .header-title, #start-btn {
+      font-family: 'Orbitron', 'Russo One', Arial, sans-serif !important;
+    }
+    #start-menu-overlay .start-fade-in {
+      opacity: 0;
+      transform: translateY(60px);
+      transition: opacity 0.7s cubic-bezier(.4,2,.6,1), transform 0.7s cubic-bezier(.4,2,.6,1);
+    }
+    #start-menu-overlay.visible .start-fade-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .header-ca-box {
+      margin-left: 18px;
+      padding: 4px 36px;
+      border-radius: 10px;
+      background: #181824;
+      color: #FFD700;
+      font-family: 'Orbitron', 'Russo One', Arial, sans-serif;
+      font-size: 1em;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      border: 1.5px solid #FFD70022;
+      box-shadow: 0 1px 4px #0006;
+      display: flex;
+      align-items: center;
+      height: 32px;
+      user-select: text;
+    }
+    @media (max-width: 700px) {
+      .header-ca-box {
+        font-size: 0.85em;
+        padding: 2px 18px;
+        height: 24px;
+        margin-left: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen Overlay -->
+  <div id="loading-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#181824;z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="loading-title" style="font-family:'Segoe UI',Arial,sans-serif;font-size:4vw;color:#FFA500;letter-spacing:0.1em;margin-bottom:2vw;font-weight:bold;">
+      BONK RUN
+    </div>
+    <div id="loading-bar-container" style="width:40vw;max-width:500px;height:1.5vw;max-height:24px;border:3px solid #FFD700;border-radius:8px;box-shadow:0 0 8px #FFD70033;background:rgba(255,255,255,0.08);">
+      <div id="loading-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#FFD700 60%,#FFA500 100%);box-shadow:0 0 8px #FFD70033;transition:width 0.2s;"></div>
+    </div>
+  </div>
+  <!-- Start Menu Overlay -->
+  <div id="start-menu-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#181824;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <img id="start-logo" class="start-fade-in" src="ec6ca7b3-3329-4160-bd6b-91382b442261.png" alt="Bonk Run Symbol" style="width:180px;max-width:40vw;margin-bottom:1.5vw;display:block;" />
+    <div id="start-title" class="start-fade-in" style="font-family:'Segoe UI',Arial,sans-serif;font-size:4vw;color:#FFA500;letter-spacing:0.1em;margin-bottom:2vw;font-weight:bold;">
+      BONK RUN
+    </div>
+    <button id="start-btn" class="start-fade-in" style="font-family:'Segoe UI',Arial,sans-serif;font-size:2vw;padding:1vw 4vw;color:#fff;background:linear-gradient(90deg,#FFA500 60%,#FFD700 100%);border:3px solid #FFA500;border-radius:12px;box-shadow:0 2px 8px #FFA50033;cursor:pointer;outline:none;transition:background 0.2s, color 0.2s;letter-spacing:0.1em;font-weight:bold;pointer-events:none;">START</button>
+    <div id="start-socials" class="start-fade-in" style="display:flex;flex-direction:row;gap:24px;margin-top:2.5vw;justify-content:center;align-items:center;">
+      <!-- X (Twitter) -->
+      <a class="header-icon-link" href="https://x.com/BonkRunDev" title="X (Twitter)" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 32 32"><path d="M19.48 13.36L30.08 2h-2.28l-9.04 9.92L10.16 2H2.32l11.04 15.68L2.32 30h2.28l9.68-10.64L21.84 30h7.84l-11.2-16.64zm-3.44 3.76l-1.12-1.6L4.08 3.36h5.04l7.36 10.56 1.12 1.6 11.12 15.68h-5.04l-7.36-10.56z"/></svg>
+      </a>
+      <!-- Community -->
+      <a class="header-icon-link" href="https://twitter.com/i/communities/1943992266785202602" title="Community" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 32 32"><path d="M16 16c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zm0 2c-4 0-12 2-12 6v4h24v-4c0-4-8-6-12-6z"/></svg>
+      </a>
+      <!-- Dex Screener (placeholder SVG) -->
+      <a class="header-icon-link" href="#" title="Dex Screener" target="_blank">
+        <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#FFD700"/><rect x="10" y="18" width="3" height="6" rx="1.5" fill="#181824"/><rect x="15" y="12" width="3" height="12" rx="1.5" fill="#181824"/><rect x="20" y="8" width="3" height="16" rx="1.5" fill="#181824"/></svg>
+      </a>
+    </div>
+  </div>
+  <!-- Game Over Overlay (new) -->
+  <div id="gameover-overlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#181824;z-index:9500;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="gameover-title" style="font-family:'Orbitron',Arial,sans-serif;font-size:4vw;color:#FF6F00;letter-spacing:0.1em;margin-bottom:2vw;font-weight:bold;">GAME OVER</div>
+    <div id="gameover-score" style="font-family:'Orbitron',Arial,sans-serif;font-size:2vw;color:#FFD700;margin-bottom:2vw;"></div>
+    <button id="restart-btn" style="font-family:'Segoe UI',Arial,sans-serif;font-size:2vw;padding:1vw 4vw;color:#fff;background:linear-gradient(90deg,#FFA500 60%,#FFD700 100%);border:3px solid #FFA500;border-radius:12px;box-shadow:0 2px 8px #FFA50033;cursor:pointer;outline:none;transition:background 0.2s, color 0.2s;letter-spacing:0.1em;font-weight:bold;margin-bottom:2vw;">RESTART</button>
+    <div id="gameover-socials" style="display:flex;flex-direction:row;gap:24px;margin-top:1vw;justify-content:center;align-items:center;">
+      <!-- X (Twitter) -->
+      <a class="header-icon-link" href="https://x.com/BonkRunDev" title="X (Twitter)" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 32 32"><path d="M19.48 13.36L30.08 2h-2.28l-9.04 9.92L10.16 2H2.32l11.04 15.68L2.32 30h2.28l9.68-10.64L21.84 30h7.84l-11.2-16.64zm-3.44 3.76l-1.12-1.6L4.08 3.36h5.04l7.36 10.56 1.12 1.6 11.12 15.68h-5.04l-7.36-10.56z"/></svg>
+      </a>
+      <!-- Community -->
+      <a class="header-icon-link" href="https://twitter.com/i/communities/1943992266785202602" title="Community" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 32 32"><path d="M16 16c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zm0 2c-4 0-12 2-12 6v4h24v-4c0-4-8-6-12-6z"/></svg>
+      </a>
+      <!-- Dex Screener (placeholder SVG) -->
+      <a class="header-icon-link" href="#" title="Dex Screener" target="_blank">
+        <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#FFD700"/><rect x="10" y="18" width="3" height="6" rx="1.5" fill="#181824"/><rect x="15" y="12" width="3" height="12" rx="1.5" fill="#181824"/><rect x="20" y="8" width="3" height="16" rx="1.5" fill="#181824"/></svg>
+      </a>
+    </div>
+  </div>
+  <div id="game-header" style="opacity:1;pointer-events:auto;">
+    <div class="header-container">
+      <div class="header-left">
+        <a id="header-home-link" href="#" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+          <img class="header-logo" src="ec6ca7b3-3329-4160-bd6b-91382b442261.png" alt="Bonk Run Symbol" />
+          <span class="header-title">BONK.RUN</span>
+        </a>
+        <span class="header-ca-box">CA: to be determined</span>
+      </div>
+      <div class="header-right">
+        <a class="header-icon-link" href="https://x.com/BonkRunDev" title="X (Twitter)" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 32 32"><path d="M19.48 13.36L30.08 2h-2.28l-9.04 9.92L10.16 2H2.32l11.04 15.68L2.32 30h2.28l9.68-10.64L21.84 30h7.84l-11.2-16.64zm-3.44 3.76l-1.12-1.6L4.08 3.36h5.04l7.36 10.56 1.12 1.6 11.12 15.68h-5.04l-7.36-10.56z"/></svg>
+        </a>
+        <a class="header-icon-link" href="https://twitter.com/i/communities/1943992266785202602" title="Community" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 32 32"><path d="M16 16c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zm0 2c-4 0-12 2-12 6v4h24v-4c0-4-8-6-12-6z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div id="score" style="display:none;">Score: 0</div>
+  <div id="instructions" style="display:none;">Use arrow keys or A/D to move left and right</div>
+  <div id="gameover"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+// --- Bonk Run 3D Endless Runner Demo ---
+// Core variables
+let scene, camera, renderer, ambientLight, dirLight;
+let bonk, bonkRadius = 1, bonkHeight = 0.3;
+let slopeSegments = [], obstacles = [];
+let slopeLength = 20, segmentLength = 10, slopeWidth = 14;
+let bonkPos = { x: 0, y: 2, z: 0 };
+let bonkVelocityZ = 0.3, bonkVelocityX = 0;
+let speed = 0.3, speedIncrement = 0.0005;
+let maxSpeed = 1.2;
+let isGameOver = false, score = 0, startTime = null;
+let keys = { left: false, right: false };
+let gameStarted = false;
+let lastSlopeZ = 0;
+let lastSlopeX = 0; // Track the X position of the last segment
+let lastWasGap = false; // Track if the last segment was a gap
+let lastObstacleX = null; // Track last obstacle X for staggering
+let lastClosedLane = null;
+let hasClockPowerup = false;
+let slowMoActive = false;
+let slowMoTimer = 0;
+let clockMeshes = [];
+let speedBeforeSlowMo = 0;
+let pumpfunTexture = null; // Will hold the pumpfun symbol texture
+let graveTexture = null; // Will hold the grave image texture
+
+// Add UI for power-up
+if (!document.getElementById('powerup')) {
+  const powerupDiv = document.createElement('div');
+  powerupDiv.id = 'powerup';
+  powerupDiv.style.position = 'absolute';
+  powerupDiv.style.top = '100px';
+  powerupDiv.style.left = '50%';
+  powerupDiv.style.transform = 'translateX(-50%)';
+  powerupDiv.style.color = '#FFA500';
+  powerupDiv.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+  powerupDiv.style.fontSize = '1.5em';
+  powerupDiv.style.textShadow = 'none';
+  powerupDiv.style.zIndex = 10;
+  powerupDiv.style.userSelect = 'none';
+  powerupDiv.innerText = '';
+  document.body.appendChild(powerupDiv);
+}
+
+// Add UI for slow motion charge bar
+if (!document.getElementById('slowmo-bar')) {
+  const barContainer = document.createElement('div');
+  barContainer.id = 'slowmo-bar';
+  barContainer.style.position = 'absolute';
+  barContainer.style.top = '60px';
+  barContainer.style.left = '50%';
+  barContainer.style.transform = 'translateX(-50%)';
+  barContainer.style.width = '220px';
+  barContainer.style.height = '18px';
+  barContainer.style.background = 'rgba(255,255,255,0.08)';
+  barContainer.style.border = '2px solid #FFD700';
+  barContainer.style.borderRadius = '10px';
+  barContainer.style.overflow = 'hidden';
+  barContainer.style.display = 'none';
+  barContainer.style.zIndex = 11;
+  const barFill = document.createElement('div');
+  barFill.id = 'slowmo-bar-fill';
+  barFill.style.height = '100%';
+  barFill.style.width = '100%';
+  barFill.style.background = 'linear-gradient(90deg, #FFD700 60%, #FFA500 100%)';
+  barFill.style.transition = 'width 0.1s linear';
+  barContainer.appendChild(barFill);
+  document.body.appendChild(barContainer);
+}
+const SLOWMO_MAX = 240; // 4 seconds at 60fps
+
+// --- Map Pool Variables ---
+const SEGMENT_POOL_SIZE = 30;
+let segmentPool = [];
+let segmentObstacles = [];
+let numLanes = 5;
+let laneWidth = slopeWidth / numLanes;
+let segmentProfiles = []; // Store which lanes are open for each segment
+
+// --- Initialization ---
+function init() {
+  console.log('Initializing Bonk Run...');
+  // Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x181824);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 6, 12);
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Lighting
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+  scene.add(ambientLight);
+  dirLight = new THREE.DirectionalLight(0xffe082, 0.8);
+  dirLight.position.set(5, 10, 7);
+  scene.add(dirLight);
+
+  // Bonk (coin)
+  let bonkMat;
+  if (window.bonkFaceTexture) {
+    bonkMat = [
+      new THREE.MeshStandardMaterial({ color: 0xFFA500, metalness: 0.7, roughness: 0.2, emissive: 0xFFD700, emissiveIntensity: 0.3 }), // side
+      new THREE.MeshBasicMaterial({ map: window.bonkFaceTexture, color: 0xFFFFFF, transparent: true }), // top
+      new THREE.MeshBasicMaterial({ map: window.bonkFaceTexture, color: 0xFFFFFF, transparent: true })  // bottom
+    ];
+  } else {
+    bonkMat = new THREE.MeshStandardMaterial({ color: 0xFFA500, metalness: 0.7, roughness: 0.2, emissive: 0xFFD700, emissiveIntensity: 0.3 });
+  }
+  const bonkGeo = new THREE.CylinderGeometry(bonkRadius, bonkRadius, bonkHeight, 32);
+  if (bonk) scene.remove(bonk);
+  bonk = new THREE.Mesh(bonkGeo, bonkMat);
+  bonk.position.set(bonkPos.x, bonkPos.y, bonkPos.z);
+  bonk.rotation.x = Math.PI / 2;
+  bonk.rotation.y = Math.PI / 2;
+  scene.add(bonk);
+
+  // Remove old segments if any
+  for (let seg of slopeSegments) scene.remove(seg.group);
+  slopeSegments = [];
+  segmentPool = [];
+  segmentObstacles = [];
+  // Create pool of segments
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const zPos = -i * segmentLength;
+    const segmentGroup = new THREE.Group();
+    // Slope
+    const slopeMat = new THREE.MeshStandardMaterial({
+      color: 0xFFF8E1, // bright joyful color
+      metalness: 0.3,
+      roughness: 0.7,
+      emissive: 0xFFD700,
+      emissiveIntensity: 0.05,
+      wireframe: false,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1
+    });
+    const slopeGeo = new THREE.BoxGeometry(slopeWidth, 0.5, segmentLength);
+    const slopeMesh = new THREE.Mesh(slopeGeo, slopeMat);
+    slopeMesh.position.set(0, 0, 0);
+    slopeMesh.renderOrder = 0;
+    segmentGroup.add(slopeMesh);
+    segmentGroup.position.set(0, 0, zPos);
+    scene.add(segmentGroup);
+    segmentPool.push(segmentGroup);
+    segmentObstacles.push([]);
+    slopeSegments.push({ group: segmentGroup, z: zPos, hasGap: false, x: 0 });
+  }
+  // Place initial obstacles
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    setSegmentProfile(i);
+    placeLanesOnSegment(i);
+  }
+  lastSlopeZ = -((SEGMENT_POOL_SIZE - 1) * segmentLength);
+  lastSlopeX = 0;
+  lastWasGap = false;
+
+  // Add grave image plane in front of the player
+  if (graveTexture) {
+    const graveWidth = slopeWidth * 2.5;
+    const graveHeight = graveWidth * 0.7;
+    const graveGeo = new THREE.PlaneGeometry(graveWidth, graveHeight);
+    const graveMat = new THREE.MeshBasicMaterial({ map: graveTexture, transparent: true });
+    const graveMesh = new THREE.Mesh(graveGeo, graveMat);
+    graveMesh.position.set(0, 6, -SEGMENT_POOL_SIZE * segmentLength - 20); // Far ahead, centered and higher
+    graveMesh.renderOrder = -1;
+    scene.add(graveMesh);
+    console.log('Grave plane added to scene.');
+  } else {
+    console.warn('No grave texture available, grave plane not added.');
+  }
+
+  // DEBUG: Add a test plane with image.png as a texture
+  const debugLoader = new THREE.TextureLoader();
+  debugLoader.load('image.png', function(debugTex) {
+    console.log('DEBUG: image.png loaded as Three.js texture.');
+    const debugGeo = new THREE.PlaneGeometry(4, 2);
+    const debugMat = new THREE.MeshBasicMaterial({ map: debugTex });
+    const debugPlane = new THREE.Mesh(debugGeo, debugMat);
+    debugPlane.position.set(0, 6, 6); // In front of camera
+    scene.add(debugPlane);
+    console.log('DEBUG: Test plane with image.png added to scene.');
+  }, undefined, function(err) {
+    console.error('DEBUG: Failed to load image.png as Three.js texture', err);
+  });
+
+  // Event listeners
+  window.addEventListener('resize', onWindowResize);
+  document.addEventListener('keydown', onKeyDown);
+  document.addEventListener('keyup', onKeyUp);
+  // Touch controls for mobile
+  document.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('touchstart', onTouchStart);
+  document.addEventListener('touchmove', onTouchMove);
+  document.addEventListener('touchend', onTouchEnd);
+
+  // Start game loop
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Place Lane Profile on Segment ---
+function setSegmentProfile(idx) {
+  let openLanes = [];
+  for (let i = 0; i < numLanes; i++) openLanes.push(i);
+  // For first 10 segments, all lanes open
+  if (idx < 10) {
+    segmentProfiles[idx] = openLanes.slice();
+    lastClosedLane = null;
+    return;
+  }
+  // Only close a lane 35% of the time (was 20%)
+  let closed = [];
+  if (Math.random() < 0.35) {
+    let possibleLanes = openLanes.slice();
+    if (lastClosedLane !== null) possibleLanes = possibleLanes.filter(l => l !== lastClosedLane);
+    let lane = possibleLanes[Math.floor(Math.random() * possibleLanes.length)];
+    closed.push(lane);
+    lastClosedLane = lane;
+  } else {
+    lastClosedLane = null;
+  }
+  segmentProfiles[idx] = openLanes.filter(l => !closed.includes(l));
+}
+
+// --- Create/Recycle Segments ---
+function placeLanesOnSegment(idx) {
+  // Remove old meshes
+  let group = segmentPool[idx];
+  for (let i = group.children.length - 1; i >= 0; i--) {
+    let obj = group.children[i];
+    if (obj.userData.laneFloor || obj.userData.laneWall || obj.userData.isClock) group.remove(obj);
+  }
+  // Place floor for open lanes, wall for closed lanes
+  let openLanes = segmentProfiles[idx];
+  for (let i = 0; i < numLanes; i++) {
+    let x = -slopeWidth / 2 + laneWidth / 2 + i * laneWidth;
+    if (openLanes.includes(i)) {
+      // Floor
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0xFFF8E1,
+        metalness: 0.3,
+        roughness: 0.7,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.05,
+        wireframe: false,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
+      });
+      const floorGeo = new THREE.BoxGeometry(laneWidth * 0.95, 0.5, segmentLength);
+      const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+      floorMesh.position.set(x, 0, 0);
+      floorMesh.userData.laneFloor = true;
+      floorMesh.renderOrder = 1;
+      group.add(floorMesh);
+    } else {
+      // Only one obstacle type: black cube with red border
+      // Black cube with red border (composite mesh)
+      const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.2, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xff2222, emissive: 0xff2222, emissiveIntensity: 0.7, wireframe: true, polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 3 });
+      // Black core
+      const blackGeo = new THREE.BoxGeometry(laneWidth * 0.85, 2, segmentLength * 0.6);
+      const blackMesh = new THREE.Mesh(blackGeo, blackMat);
+      blackMesh.renderOrder = 2;
+      // Red border (slightly larger box, wireframe look)
+      const redGeo = new THREE.BoxGeometry(laneWidth * 0.95, 2.1, segmentLength * 0.7);
+      const redMesh = new THREE.Mesh(redGeo, redMat);
+      redMesh.renderOrder = 3;
+      // Group them
+      const groupMesh = new THREE.Group();
+      groupMesh.add(redMesh);
+      groupMesh.add(blackMesh);
+      groupMesh.position.set(x, 1.25 + 0.01, 0);
+      groupMesh.userData.laneWall = true;
+      group.add(groupMesh);
+    }
+  }
+  // Place clock power-up
+  placeClockOnSegment(idx);
+}
+
+// --- Slope Recycling & Generation ---
+function updateSlope() {
+  const bonkZ = bonkPos.z;
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const seg = segmentPool[i];
+    if (seg.position.z > bonkZ + segmentLength * 2) {
+      let minZ = Math.min(...segmentPool.map(s => s.position.z));
+      seg.position.z = minZ - segmentLength;
+      setSegmentProfile(i);
+      placeLanesOnSegment(i);
+    }
+  }
+}
+
+// --- Player Movement ---
+function updatePlayer() {
+  if (!gameStarted) return;
+  // Horizontal movement
+  let moveX = 0;
+  const moveSpeed = 0.18;
+  if (keys.left) moveX -= moveSpeed;
+  if (keys.right) moveX += moveSpeed;
+  bonkPos.x += moveX;
+  // Clamp to slope width
+  bonkPos.x = Math.max(-slopeWidth / 2 + bonkRadius, Math.min(slopeWidth / 2 - bonkRadius, bonkPos.x));
+  // Forward movement
+  bonkPos.z -= speed;
+  // Simulate gravity
+  if (!isOnSlope()) {
+    bonkPos.y -= 0.25;
+  } else {
+    bonkPos.y = 2;
+  }
+  // Rolling animation (slower)
+  bonk.rotation.z += speed * 0.08;
+  // Update mesh position
+  bonk.position.set(bonkPos.x, bonkPos.y, bonkPos.z);
+}
+
+// --- Collision Detection ---
+function checkCollisions() {
+  // Check if Bonk is on a gap
+  if (!isOnSlope()) {
+    triggerGameOver();
+    return;
+  }
+  // Check for wall collision
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const seg = segmentPool[i];
+    if (Math.abs(bonkPos.z - seg.position.z) < segmentLength / 2) {
+      let laneIdx = Math.floor((bonkPos.x + slopeWidth / 2) / laneWidth);
+      if (segmentProfiles[i] && !segmentProfiles[i].includes(laneIdx)) {
+        triggerGameOver();
+        return;
+      }
+    }
+  }
+}
+
+function isOnSlope() {
+  // Find the segment Bonk is over
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const seg = segmentPool[i];
+    if (Math.abs(bonkPos.z - seg.position.z) < segmentLength / 2) {
+      // Which lane is Bonk in?
+      let laneIdx = Math.floor((bonkPos.x + slopeWidth / 2) / laneWidth);
+      if (segmentProfiles[i] && segmentProfiles[i].includes(laneIdx)) return true;
+    }
+  }
+  return false;
+}
+
+// --- Score System ---
+function updateScore() {
+  if (!gameStarted || isGameOver) return;
+  score = Math.floor((Date.now() - startTime) / 10);
+  document.getElementById('score').textContent = 'Score: ' + score;
+}
+
+// --- Game Over ---
+function triggerGameOver() {
+  isGameOver = true;
+  // Fade out game UI
+  document.getElementById('score').classList.add('fade-out');
+  document.getElementById('instructions').classList.add('fade-out');
+  document.getElementById('gameover').classList.add('fade-out');
+  // Hide start menu overlay if visible
+  document.getElementById('start-menu-overlay').classList.remove('visible');
+  document.getElementById('start-menu-overlay').style.pointerEvents = 'none';
+  // Hide score/instructions after fade
+  setTimeout(() => {
+    document.getElementById('score').style.display = 'none';
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('gameover').style.display = 'none';
+    // Show game over overlay
+    const gameoverOverlay = document.getElementById('gameover-overlay');
+    document.getElementById('gameover-score').textContent = 'Score: ' + score;
+    gameoverOverlay.style.display = 'flex';
+    setTimeout(() => {
+      gameoverOverlay.classList.add('visible');
+    }, 10);
+    // Attach restart handler
+    const restartBtn = document.getElementById('restart-btn');
+    restartBtn.onclick = null;
+    restartBtn.onclick = function() {
+      // Fade out overlay
+      gameoverOverlay.classList.remove('visible');
+      setTimeout(() => {
+        gameoverOverlay.style.display = 'none';
+        restartGame();
+      }, 700);
+    };
+  }, 600);
+}
+
+// --- Restart Game ---
+function restartGame() {
+  // Remove old slope and obstacles
+  for (let seg of slopeSegments) scene.remove(seg.group);
+  slopeSegments = [];
+  segmentPool = [];
+  segmentObstacles = [];
+  segmentProfiles = [];
+  lastClosedLane = null;
+  // Reset Bonk in center lane
+  bonkPos = { x: 0, y: 2, z: 0 };
+  bonk.position.set(bonkPos.x, bonkPos.y, bonkPos.z);
+  bonk.rotation.z = 0;
+  // Recreate map
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const zPos = -i * segmentLength;
+    const segmentGroup = new THREE.Group();
+    segmentGroup.position.set(0, 0, zPos);
+    scene.add(segmentGroup);
+    segmentPool.push(segmentGroup);
+    slopeSegments.push({ group: segmentGroup, z: zPos, hasGap: false, x: 0 });
+  }
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    setSegmentProfile(i);
+    placeLanesOnSegment(i);
+  }
+  lastSlopeZ = -((SEGMENT_POOL_SIZE - 1) * segmentLength);
+  lastSlopeX = 0;
+  lastWasGap = false;
+  // Reset state
+  speed = 0.3;
+  isGameOver = false;
+  score = 0;
+  startTime = Date.now();
+  document.getElementById('score').textContent = 'Score: 0';
+  document.getElementById('gameover').style.display = 'none';
+  document.getElementById('instructions').style.display = 'none';
+  // Show score/instructions for new game
+  document.getElementById('score').style.display = 'block';
+  document.getElementById('instructions').style.display = 'block';
+  gameStarted = true;
+  hasClockPowerup = false;
+  slowMoActive = false;
+  slowMoTimer = 0;
+  document.getElementById('powerup').innerText = '';
+  document.getElementById('slowmo-bar').style.display = 'none';
+}
+
+// --- Power-up Placement ---
+function placeClockOnSegment(idx) {
+  // Remove old clock if any
+  if (clockMeshes[idx]) {
+    if (clockMeshes[idx].parent) clockMeshes[idx].parent.remove(clockMeshes[idx]);
+    clockMeshes[idx] = null;
+  }
+  // Only place on some segments (e.g., 1 in 10)
+  if (idx < 10 || Math.random() > 0.1) return;
+  // Place in a random open lane
+  const openLanes = segmentProfiles[idx];
+  if (!openLanes || openLanes.length === 0) return;
+  const lane = openLanes[Math.floor(Math.random() * openLanes.length)];
+  const x = -slopeWidth / 2 + laneWidth / 2 + lane * laneWidth;
+  // Clock mesh (yellow cylinder)
+  const clockMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xFFD700, emissiveIntensity: 0.5 });
+  const clockGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 24);
+  const clockMesh = new THREE.Mesh(clockGeo, clockMat);
+  clockMesh.position.set(x, 1, 0);
+  clockMesh.rotation.x = Math.PI / 2;
+  clockMesh.userData.isClock = true;
+  segmentPool[idx].add(clockMesh);
+  clockMeshes[idx] = clockMesh;
+}
+
+// --- Power-up Collision ---
+function checkClockCollision() {
+  for (let i = 0; i < SEGMENT_POOL_SIZE; i++) {
+    const clock = clockMeshes[i];
+    if (!clock || !clock.parent) continue;
+    const dx = bonk.position.x - (clock.parent.position.x + clock.position.x);
+    const dz = bonk.position.z - (clock.parent.position.z + clock.position.z);
+    if (Math.abs(dx) < 0.8 && Math.abs(dz) < 1.1 && bonk.position.y < 2.5) {
+      // Collect power-up
+      hasClockPowerup = true;
+      clock.parent.remove(clock);
+      clockMeshes[i] = null;
+      document.getElementById('powerup').innerText = 'Clock Ready! Press Space to slow time';
+    }
+  }
+}
+
+// --- Slow Motion Activation ---
+function tryActivateSlowMo() {
+  if (hasClockPowerup && !slowMoActive) {
+    slowMoActive = true;
+    hasClockPowerup = false;
+    slowMoTimer = 240; // ~4 seconds at 60fps
+    speedBeforeSlowMo = speed;
+    document.getElementById('powerup').innerText = 'Slow Motion!';
+  }
+}
+
+// --- Main Game Loop ---
+function gameLoop() {
+  if (!isGameOver && gameStarted) {
+    // Always show score and instructions during gameplay
+    const scoreEl = document.getElementById('score');
+    const instrEl = document.getElementById('instructions');
+    if (scoreEl) {
+      scoreEl.style.display = 'block';
+      scoreEl.style.opacity = '1';
+      scoreEl.classList.remove('fade-out');
+    }
+    if (instrEl) {
+      instrEl.style.display = 'block';
+      instrEl.style.opacity = '1';
+      instrEl.classList.remove('fade-out');
+    }
+    updatePlayer();
+    updateSlope();
+    checkCollisions();
+    checkClockCollision();
+    updateScore();
+    // Increase speed (slower ramp)
+    if (slowMoActive) {
+      speed = Math.max(0.12, speed - 0.001);
+      slowMoTimer--;
+      // Update slowmo bar
+      const bar = document.getElementById('slowmo-bar');
+      const fill = document.getElementById('slowmo-bar-fill');
+      bar.style.display = 'block';
+      fill.style.width = Math.max(0, (slowMoTimer / SLOWMO_MAX) * 100) + '%';
+      if (slowMoTimer <= 0) {
+        slowMoActive = false;
+        document.getElementById('powerup').innerText = '';
+        bar.style.display = 'none';
+        speed = speedBeforeSlowMo;
+      }
+    } else {
+      speed = Math.min(maxSpeed, speed + speedIncrement * 0.5);
+      // Hide slowmo bar if not active
+      document.getElementById('slowmo-bar').style.display = 'none';
+    }
+  }
+  // Camera follows Bonk
+  camera.position.x += (bonk.position.x - camera.position.x) * 0.1;
+  camera.position.y += ((bonk.position.y + 5) - camera.position.y) * 0.08;
+  camera.position.z += ((bonk.position.z + 12) - camera.position.z) * 0.08;
+  camera.lookAt(bonk.position.x, bonk.position.y, bonk.position.z - 8);
+  renderer.render(scene, camera);
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Input Handlers ---
+function onKeyDown(e) {
+  if (isGameOver && (e.code === 'Space' || e.key === ' ')) {
+    restartGame();
+    return;
+  }
+  if (!gameStarted) {
+    startTime = Date.now();
+    gameStarted = true;
+    document.getElementById('instructions').style.display = 'none';
+  }
+  if (e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+  if (e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+  if (e.code === 'Space' || e.key === ' ') tryActivateSlowMo();
+}
+function onKeyUp(e) {
+  if (e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+  if (e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+}
+
+// Touch controls for mobile
+let touchStartX = null;
+function onMouseDown(e) {
+  if (isGameOver) {
+    restartGame();
+  }
+}
+function onTouchStart(e) {
+  if (isGameOver) {
+    restartGame();
+    return;
+  }
+  if (!gameStarted) {
+    startTime = Date.now();
+    gameStarted = true;
+    document.getElementById('instructions').style.display = 'none';
+  }
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX;
+  }
+}
+function onTouchMove(e) {
+  if (touchStartX !== null && e.touches.length === 1) {
+    const dx = e.touches[0].clientX - touchStartX;
+    if (dx < -20) { keys.left = true; keys.right = false; }
+    else if (dx > 20) { keys.right = true; keys.left = false; }
+    else { keys.left = false; keys.right = false; }
+  }
+}
+function onTouchEnd(e) {
+  keys.left = false;
+  keys.right = false;
+  touchStartX = null;
+}
+
+// --- Window Resize ---
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// --- Loading Screen Logic ---
+// Preload image during loading screen, then show start menu
+function showLoadingScreen(onComplete) {
+  const overlay = document.getElementById('loading-overlay');
+  const bar = document.getElementById('loading-bar');
+  const loadingTitle = document.getElementById('loading-title');
+  const loadingBarContainer = document.getElementById('loading-bar-container');
+  const startMenu = document.getElementById('start-menu-overlay');
+  const startBtn = document.getElementById('start-btn');
+  const startSocials = document.getElementById('start-socials');
+  const startLogo = document.getElementById('start-logo');
+  const startTitle = document.getElementById('start-title');
+  const header = document.getElementById('game-header');
+  startMenu.style.display = 'flex'; // Always visible for animation
+  // Prepare all start menu children for animation
+  [startLogo, startTitle, startBtn, startSocials].forEach(el => {
+    if (el) {
+      el.classList.remove('visible');
+      el.classList.remove('fade-in');
+      el.classList.remove('start-fade-in-animate');
+      el.classList.remove('start-fade-in');
+      el.classList.add('start-fade-in');
+    }
+  });
+  startBtn.style.pointerEvents = 'none';
+  startMenu.style.opacity = '0';
+  startMenu.style.pointerEvents = 'none';
+  header.style.opacity = '0';
+  header.style.pointerEvents = 'none';
+  let progress = 0;
+  let imageLoaded = false;
+  let graveLoaded = false;
+  let barDone = false;
+
+  function finishIfReady() {
+    if (imageLoaded && graveLoaded && barDone) {
+      // As soon as loading is done, crossfade out loading overlay and in start menu/header
+      loadingTitle.classList.add('animated-up');
+      loadingBarContainer.classList.add('faded-out');
+      // Start menu and header fade in immediately
+      startMenu.classList.add('visible');
+      startMenu.style.opacity = '1';
+      startMenu.style.pointerEvents = 'auto';
+      header.style.opacity = '1';
+      header.style.pointerEvents = 'auto';
+      [startLogo, startTitle, startBtn, startSocials].forEach(el => {
+        if (el) el.classList.add('visible');
+      });
+      startBtn.style.pointerEvents = 'auto';
+      // Fade out loading overlay
+      overlay.style.transition = 'opacity 0.7s';
+      overlay.style.opacity = 0;
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        if (onComplete) onComplete();
+      }, 700);
+    }
+  }
+
+  // Start loading the image
+  const loader = new THREE.TextureLoader();
+  loader.load('image.png', function(bonkFaceTexture) {
+    window.bonkFaceTexture = bonkFaceTexture;
+    imageLoaded = true;
+    finishIfReady();
+  }, function(xhr) {}, function(err) {
+    console.error('Bonk face texture failed to load', err);
+    window.bonkFaceTexture = null;
+    imageLoaded = true;
+    finishIfReady();
+  });
+  // Load grave image
+  loader.load('239c1e8f-18cc-42ab-8203-139bb3e2e907_removalai_preview.png', function(tex) {
+    console.log('Grave image loaded successfully.');
+    graveTexture = tex;
+    graveLoaded = true;
+    finishIfReady();
+  }, function(xhr) {}, function(err) {
+    console.error('Grave image failed to load, using fallback image.png', err);
+    // Fallback: try loading image.png as grave
+    loader.load('image.png', function(fallbackTex) {
+      graveTexture = fallbackTex;
+      graveLoaded = true;
+      finishIfReady();
+    }, function(xhr) {}, function(err2) {
+      console.error('Fallback grave image also failed to load', err2);
+      graveTexture = null;
+      graveLoaded = true;
+      finishIfReady();
+    });
+  });
+
+  function animateBar() {
+    progress += Math.random() * 8 + 2; // Simulate loading
+    if (progress > 100) progress = 100;
+    bar.style.width = progress + '%';
+    if (progress < 100) {
+      setTimeout(animateBar, 40 + Math.random() * 60);
+    } else {
+      barDone = true;
+      finishIfReady();
+    }
+  }
+  animateBar();
+}
+
+// --- Start Menu Logic ---
+function showStartMenu(onStart) {
+  const menu = document.getElementById('start-menu-overlay');
+  menu.style.display = 'flex';
+  menu.style.opacity = '1';
+  menu.style.pointerEvents = 'auto';
+  setTimeout(() => { menu.classList.add('visible'); }, 10);
+  // Header is always visible, never toggled
+  // Hide score and instructions during overlays
+  document.getElementById('score').style.display = 'none';
+  document.getElementById('instructions').style.display = 'none';
+  document.getElementById('score').classList.remove('fade-out');
+  document.getElementById('instructions').classList.remove('fade-out');
+  document.getElementById('gameover').classList.remove('fade-out');
+  const startBtn = document.getElementById('start-btn');
+  const startLogo = document.getElementById('start-logo');
+  const startTitle = document.getElementById('start-title');
+  startBtn.onclick = null;
+  startLogo.classList.remove('fade-in');
+  startTitle.classList.remove('fade-in');
+  startBtn.classList.remove('fade-in');
+  startLogo.style.opacity = '0';
+  startTitle.style.opacity = '0';
+  startBtn.style.opacity = '0';
+  setTimeout(() => {
+    startLogo.classList.add('fade-in');
+    startTitle.classList.add('fade-in');
+    startBtn.classList.add('fade-in');
+  }, 100);
+  startBtn.onclick = function handleStart() {
+    menu.classList.remove('visible');
+    setTimeout(() => {
+      // Do not set display:none, just hide by opacity/pointer-events
+      menu.style.opacity = '0';
+      menu.style.pointerEvents = 'none';
+      startBtn.onclick = null;
+      // Show score and instructions when game starts
+      document.getElementById('score').style.display = 'block';
+      document.getElementById('instructions').style.display = 'block';
+      document.getElementById('score').classList.remove('fade-out');
+      document.getElementById('instructions').classList.remove('fade-out');
+      document.getElementById('gameover').classList.remove('fade-out');
+      if (onStart) onStart();
+    }, 700);
+  };
+}
+
+// --- Start the game ---
+window.onload = () => {
+  document.getElementById('gameover-overlay').style.display = 'none';
+  // Always keep start menu overlay in the DOM, hidden by opacity, not display
+  const startMenu = document.getElementById('start-menu-overlay');
+  startMenu.style.display = 'flex';
+  startMenu.style.opacity = '0';
+  startMenu.style.pointerEvents = 'none';
+  // Header is always visible, never toggled
+  const header = document.getElementById('game-header');
+  header.style.opacity = '1';
+  header.style.pointerEvents = 'auto';
+  showLoadingScreen(() => {
+    showStartMenu(() => {
+      // Image is already loaded, just init
+    init();
+    });
+  });
+};
+// TODO: Review segment recycling and rendering logic for map flicker.
+  </script>
+</body>
+</html> 

@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bonk Run - 3D Endless Runner Demo</title>
+  <title>Bonk Run</title>
+  <link rel="icon" type="image/png" href="ec6ca7b3-3329-4160-bd6b-91382b442261.png">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Russo+One&display=swap" rel="stylesheet">
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #181824; }
@@ -185,9 +186,11 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .header-ca-box {
+    .header-ca-box, .start-ca-box {
       margin-left: 18px;
-      padding: 4px 36px;
+      margin-top: 10px;
+      padding: 4px 24px;
+      min-width: 800px;
       border-radius: 10px;
       background: #181824;
       color: #FFD700;
@@ -199,15 +202,62 @@
       box-shadow: 0 1px 4px #0006;
       display: flex;
       align-items: center;
-      height: 32px;
+      height: 38px;
       user-select: text;
+      justify-content: flex-start;
+      gap: 12px;
+      margin-bottom: 0;
+      max-width: 98vw;
     }
-    @media (max-width: 700px) {
-      .header-ca-box {
-        font-size: 0.85em;
-        padding: 2px 18px;
-        height: 24px;
-        margin-left: 8px;
+    .header-ca-box .ca-input, .start-ca-box .ca-input {
+      letter-spacing: 0.12em;
+      font-size: 0.92em;
+      min-width: 700px;
+      max-width: 100%;
+    }
+    .ca-label {
+      color: #FFD700;
+      font-weight: bold;
+      font-size: 1em;
+      margin-right: 8px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .ca-input {
+      flex: 1;
+      min-width: 480px;
+      max-width: 100%;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1.5px solid #FFD70044;
+      background: #23232a;
+      color: #FFD700;
+      font-family: 'Orbitron', 'Russo One', Arial, sans-serif;
+      font-size: 1em;
+      font-weight: bold;
+      outline: none;
+      transition: border 0.2s;
+      cursor: pointer;
+    }
+    .ca-input:focus {
+      border: 1.5px solid #FFD700;
+      background: #181824;
+    }
+    .ca-input[readonly] {
+      background: #23232a;
+      cursor: pointer;
+    }
+    @media (max-width: 900px) {
+      .header-ca-box, .start-ca-box {
+        min-width: 320px;
+        font-size: 0.95em;
+        height: 32px;
+        padding: 2px 8px;
+      }
+      .ca-input {
+        min-width: 180px;
+        font-size: 0.95em;
+        padding: 2px 6px;
       }
     }
   </style>
@@ -228,6 +278,10 @@
     <div id="start-title" class="start-fade-in" style="font-family:'Segoe UI',Arial,sans-serif;font-size:4vw;color:#FFA500;letter-spacing:0.1em;margin-bottom:2vw;font-weight:bold;">
       BONK RUN
     </div>
+    <div class="start-ca-box start-fade-in">
+      <span class="ca-label">CA:</span>
+      <input class="ca-input" type="text" value="B28Tek8PQtbmUzV9QsB8b11KBqYuXcu9Jka5CLCEbonk" readonly onclick="this.select()" />
+    </div>
     <button id="start-btn" class="start-fade-in" style="font-family:'Segoe UI',Arial,sans-serif;font-size:2vw;padding:1vw 4vw;color:#fff;background:linear-gradient(90deg,#FFA500 60%,#FFD700 100%);border:3px solid #FFA500;border-radius:12px;box-shadow:0 2px 8px #FFA50033;cursor:pointer;outline:none;transition:background 0.2s, color 0.2s;letter-spacing:0.1em;font-weight:bold;pointer-events:none;">START</button>
     <div id="start-socials" class="start-fade-in" style="display:flex;flex-direction:row;gap:24px;margin-top:2.5vw;justify-content:center;align-items:center;">
       <!-- X (Twitter) -->
@@ -237,10 +291,6 @@
       <!-- Community -->
       <a class="header-icon-link" href="https://twitter.com/i/communities/1943992266785202602" title="Community" target="_blank" rel="noopener noreferrer">
         <svg viewBox="0 0 32 32"><path d="M16 16c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zm0 2c-4 0-12 2-12 6v4h24v-4c0-4-8-6-12-6z"/></svg>
-      </a>
-      <!-- Dex Screener (placeholder SVG) -->
-      <a class="header-icon-link" href="#" title="Dex Screener" target="_blank">
-        <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#FFD700"/><rect x="10" y="18" width="3" height="6" rx="1.5" fill="#181824"/><rect x="15" y="12" width="3" height="12" rx="1.5" fill="#181824"/><rect x="20" y="8" width="3" height="16" rx="1.5" fill="#181824"/></svg>
       </a>
     </div>
   </div>
@@ -271,7 +321,10 @@
           <img class="header-logo" src="ec6ca7b3-3329-4160-bd6b-91382b442261.png" alt="Bonk Run Symbol" />
           <span class="header-title">BONK.RUN</span>
         </a>
-        <span class="header-ca-box">CA: to be determined</span>
+        <div class="header-ca-box">
+          <span class="ca-label">CA:</span>
+          <input class="ca-input" type="text" value="B28Tek8PQtbmUzV9QsB8b11KBqYuXcu9Jka5CLCEbonk" readonly onclick="this.select()" />
+        </div>
       </div>
       <div class="header-right">
         <a class="header-icon-link" href="https://x.com/BonkRunDev" title="X (Twitter)" target="_blank" rel="noopener noreferrer">
